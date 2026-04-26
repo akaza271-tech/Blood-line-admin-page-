@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life Link | Admin v5</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-900">
+
+<div id="app" class="min-h-screen p-4 md:p-8">
+    <header class="mb-10 flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border-b-4 border-red-600">
+        <h1 class="text-2xl font-black tracking-tighter">LIFE LINK <span class="text-red-600">ADMIN</span></h1>
+        <div class="bg-slate-100 px-3 py-1 rounded text-xs font-bold text-slate-500 uppercase">Secure Access</div>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <button @click="currentView = 'donors'" :class="currentView === 'donors' ? 'border-red-500 ring-4 ring-red-50' : 'border-transparent'" class="bg-white p-6 rounded-2xl shadow-sm border-2 transition-all text-left">
+            <p class="text-slate-400 font-bold text-xs uppercase">Donors</p>
+            <h2 class="text-4xl font-black">{{ donors.length }}</h2>
+        </button>
+
+        <button @click="currentView = 'hospitals'" :class="currentView === 'hospitals' ? 'border-blue-500 ring-4 ring-blue-50' : 'border-transparent'" class="bg-white p-6 rounded-2xl shadow-sm border-2 transition-all text-left">
+            <p class="text-slate-400 font-bold text-xs uppercase">Hospitals</p>
+            <h2 class="text-4xl font-black">{{ hospitals.length }}</h2>
+        </button>
+
+        <button @click="currentView = 'history'" :class="currentView === 'history' ? 'border-emerald-500 ring-4 ring-emerald-50' : 'border-transparent'" class="bg-white p-6 rounded-2xl shadow-sm border-2 transition-all text-left">
+            <p class="text-slate-400 font-bold text-xs uppercase">History</p>
+            <h2 class="text-4xl font-black">{{ donations.length }}</h2>
+        </button>
+    </div>
+
+    <main class="bg-white rounded-3xl shadow-sm p-6 md:p-10 border border-slate-100">
+        
+        <div v-if="currentView === 'donors'">
+            <h3 class="text-xl font-black mb-6 uppercase tracking-tight">Blood Group Inventory</h3>
+            
+            <div class="bg-slate-50 p-6 rounded-3xl mb-10">
+                <div class="flex flex-col lg:flex-row items-center gap-12">
+                    <div class="w-full lg:w-1/3 h-64 relative">
+                        <canvas id="donorChart"></canvas>
+                    </div>
+
+                    <div class="w-full lg:w-2/3 grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div v-for="(color, group) in groupColors" :key="group" 
+                             class="bg-white p-4 rounded-xl border border-slate-200 flex flex-col items-center">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span :style="{ backgroundColor: color }" class="w-3 h-3 rounded-full inline-block border border-slate-300"></span>
+                                <span class="text-xs font-bold text-slate-500">{{ group }}</span>
+                            </div>
+                            <p class="text-2xl font-black" :style="{ color: color }">{{ donorStats[group] }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto border rounded-2xl">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+                        <tr><th class="p-4">Donor Name</th><th class="p-4">Blood Group</th><th class="p-4 text-right">Action</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(d, i) in donors" :key="i" class="border-t hover:bg-slate-50 transition-colors">
+                            <td class="p-4 font-bold">{{ d.name }}</td>
+                            <td class="p-4">
+                                <span :style="{ backgroundColor: groupColors[d.group] }" class="text-white px-3 py-1 rounded text-xs font-bold">{{ d.group }}</span>
+                            </td>
+                            <td class="p-4 text-right"><button @click="removeItem('donors', i)" class="text-red-500 font-bold text-xs">REMOVE</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div v-if="currentView === 'history'">
+            <h3 class="text-xl font-black mb-6 uppercase tracking-tight text-emerald-600">Donation Records</h3>
+            <div class="bg-slate-50 p-6 rounded-3xl mb-10 h-72">
+                <canvas id="historyChart"></canvas>
+            </div>
+            <div class="overflow-x-auto border rounded-2xl">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+                        <tr><th class="p-4">Donor</th><th class="p-4">Hospital</th><th class="p-4">Date</th><th class="p-4 text-right">Action</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(h, i) in donations" :key="i" class="border-t hover:bg-emerald-50">
+                            <td class="p-4 font-bold">{{ h.donor }}</td>
+                            <td class="p-4 text-slate-600">{{ h.hosp }}</td>
+                            <td class="p-4"><span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">{{ h.date }}</span></td>
+                            <td class="p-4 text-right"><button @click="removeItem('donations', i)" class="text-red-400 font-bold text-xs">DELETE</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div v-if="currentView === 'hospitals'">
+            <h3 class="text-xl font-black mb-8 uppercase tracking-tight text-blue-600">Hospitals List</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div v-for="(h, i) in hospitals" :key="i" class="p-6 border rounded-2xl flex justify-between items-center bg-white hover:border-blue-300 transition-colors">
+                    <div>
+                        <p class="font-bold text-slate-800 text-lg">{{ h.name }}</p>
+                        <p class="text-slate-400 text-sm italic">{{ h.address }}</p>
+                    </div>
+                    <button @click="removeItem('hospitals', i)" class="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-red-500 hover:text-white transition-colors">REMOVE</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="currentView === 'summary'" class="py-20 text-center opacity-30">
+            <p class="text-xl font-bold">Select a module to view data</p>
+        </div>
+
+    </main>
+</div>
+
+<script>
+    const { createApp, ref, onMounted, watch, nextTick, computed } = Vue;
+
+    createApp({
+        setup() {
+            const currentView = ref('summary');
+
+            // --- COLOR DEFINITIONS (The Legend) ---
+            const groupColors = {
+                'A+': '#dc2626',   // Red
+                'A-': '#ef4444',   // Lighter Red
+                'B+': '#2563eb',   // Blue
+                'B-': '#3b82f6',   // Lighter Blue
+                'O+': '#d97706',   // Amber
+                'O-': '#f59e0b',   // Lighter Amber
+                'AB+': '#7c3aed',  // Violet
+                'AB-': '#1e293b'   // Slate (Blackish)
+            };
+
+            const donors = ref([
+                { name: 'Rahul Sharma', group: 'O+' },
+                { name: 'Arjun Kapoor', group: 'A+' },
+                { name: 'Sneha Reddy', group: 'B+' },
+                { name: 'Priya Verma', group: 'O-' },
+                { name: 'Vikram Singh', group: 'AB+' },
+                { name: 'Anjali Nair', group: 'A-' },
+                { name: 'Rohan Das', group: 'B-' },
+                { name: 'Meera Iyer', group: 'AB-' }
+            ]);
+
+            const hospitals = ref([
+                { name: 'City General Hospital', address: 'Mumbai Central' },
+                { name: 'Red Cross Life', address: 'New Delhi' }
+            ]);
+
+            const donations = ref([
+                { donor: 'Rahul Sharma', hosp: 'City General', date: '2026-04-20' },
+                { donor: 'Vikram Singh', hosp: 'Red Cross Life', date: '2026-04-26' }
+            ]);
+
+            const donorStats = computed(() => {
+                const counts = {};
+                Object.keys(groupColors).forEach(k => counts[k] = 0);
+                donors.value.forEach(d => { if(counts[d.group] !== undefined) counts[d.group]++; });
+                return counts;
+            });
+
+            const removeItem = (type, index) => {
+                if(confirm("Permanently delete this record?")) {
+                    if(type === 'donors') donors.value.splice(index, 1);
+                    if(type === 'hospitals') hospitals.value.splice(index, 1);
+                    if(type === 'donations') donations.value.splice(index, 1);
+                }
+            };
+
+            let dChart = null; let hChart = null;
+
+            const renderDonorChart = () => {
+                const ctx = document.getElementById('donorChart').getContext('2d');
+                if(dChart) dChart.destroy();
+                dChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(groupColors),
+                        datasets: [{ 
+                            data: Object.values(donorStats.value), 
+                            backgroundColor: Object.values(groupColors), 
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: { 
+                        maintainAspectRatio: false, 
+                        cutout: '75%',
+                        plugins: { legend: { display: false } } // We built our own custom legend below
+                    }
+                });
+            };
+
+            const renderHistoryChart = () => {
+                const ctx = document.getElementById('historyChart').getContext('2d');
+                if(hChart) hChart.destroy();
+                hChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                        datasets: [{
+                            label: 'Monthly Trend',
+                            data: [10, 22, 14, 30],
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: { maintainAspectRatio: false }
+                });
+            };
+
+            watch(currentView, (val) => {
+                nextTick(() => {
+                    if(val === 'donors') renderDonorChart();
+                    if(val === 'history') renderHistoryChart();
+                });
+            });
+
+            return { currentView, donors, hospitals, donations, donorStats, removeItem, groupColors };
+        }
+    }).mount('#app');
+</script>
+
+</body>
+</html>
